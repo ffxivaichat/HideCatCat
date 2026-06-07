@@ -23,6 +23,9 @@ public class GameClient : IDisposable
     /// <summary>连接状态变化时触发</summary>
     public event Action<bool>? OnConnectionChanged;
 
+    /// <summary>发生错误时触发</summary>
+    public event Action<string>? OnError;
+
     /// <summary>连接到服务器，传入服务器地址和口令</summary>
     public async Task ConnectAsync(string serverUrl, string password)
     {
@@ -31,7 +34,9 @@ public class GameClient : IDisposable
             (!serverUrl.StartsWith("ws://", StringComparison.OrdinalIgnoreCase) &&
              !serverUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase)))
         {
-            Plugin.Log.Warning($"[GameClient] ❌ 无效的服务器地址: {serverUrl}");
+            var error = $"无效的服务器地址: {serverUrl}";
+            Plugin.Log.Warning($"[GameClient] ❌ {error}");
+            OnError?.Invoke(error);
             OnConnectionChanged?.Invoke(false);
             return;
         }
@@ -39,7 +44,9 @@ public class GameClient : IDisposable
         var fullUrl = $"{serverUrl}?password={Uri.EscapeDataString(password)}";
         if (!Uri.TryCreate(fullUrl, UriKind.Absolute, out _))
         {
-            Plugin.Log.Warning($"[GameClient] ❌ 无法解析的地址: {fullUrl}");
+            var error = $"无法解析的地址: {fullUrl}";
+            Plugin.Log.Warning($"[GameClient] ❌ {error}");
+            OnError?.Invoke(error);
             OnConnectionChanged?.Invoke(false);
             return;
         }
@@ -60,7 +67,9 @@ public class GameClient : IDisposable
         }
         catch (Exception ex)
         {
-            Plugin.Log.Warning($"[GameClient] ❌ 连接失败: {ex.Message}");
+            var error = $"连接失败: {ex.Message}";
+            Plugin.Log.Warning($"[GameClient] ❌ {error}");
+            OnError?.Invoke(error);
             OnConnectionChanged?.Invoke(false);
         }
     }
