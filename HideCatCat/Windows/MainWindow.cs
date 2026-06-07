@@ -147,7 +147,8 @@ public sealed class MainWindow : Window
             ImGui.Spacing();
             ImGui.Separator();
             ImGui.Spacing();
-            ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f), $"❌ {_errorMessage}");
+            ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f), "❌");
+            ImGui.TextColored(new Vector4(1f, 0.3f, 0.3f, 1f), _errorMessage);
         }
     }
 
