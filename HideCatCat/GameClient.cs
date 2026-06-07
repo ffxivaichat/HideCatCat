@@ -26,6 +26,24 @@ public class GameClient : IDisposable
     /// <summary>连接到服务器，传入服务器地址和口令</summary>
     public async Task ConnectAsync(string serverUrl, string password)
     {
+        // URL 格式校验
+        if (string.IsNullOrWhiteSpace(serverUrl) ||
+            (!serverUrl.StartsWith("ws://", StringComparison.OrdinalIgnoreCase) &&
+             !serverUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase)))
+        {
+            Plugin.Log.Warning($"[GameClient] ❌ 无效的服务器地址: {serverUrl}");
+            OnConnectionChanged?.Invoke(false);
+            return;
+        }
+
+        var fullUrl = $"{serverUrl}?password={Uri.EscapeDataString(password)}";
+        if (!Uri.TryCreate(fullUrl, UriKind.Absolute, out _))
+        {
+            Plugin.Log.Warning($"[GameClient] ❌ 无法解析的地址: {fullUrl}");
+            OnConnectionChanged?.Invoke(false);
+            return;
+        }
+
         _password = password;
         _cts = new CancellationTokenSource();
 
@@ -33,7 +51,7 @@ public class GameClient : IDisposable
         try
         {
             _ws = new ClientWebSocket();
-            await _ws.ConnectAsync(new Uri($"{serverUrl}?password={Uri.EscapeDataString(password)}"), _cts.Token);
+            await _ws.ConnectAsync(new Uri(fullUrl), _cts.Token);
 
             Plugin.Log.Info($"[GameClient] ✅ 已连接 password=***");
             OnConnectionChanged?.Invoke(true);

@@ -288,7 +288,7 @@ public sealed class MainWindow : Window
             }
             OverlayText = sb.ToString().TrimEnd();
 
-            SendPositionIfNeeded(pos);
+            _ = SendPositionIfNeededAsync(pos);
         }
 
         if (!string.IsNullOrEmpty(_lastEvent))
@@ -338,7 +338,7 @@ public sealed class MainWindow : Window
     }
 
     private DateTime _lastPosSend;
-    private async void SendPositionIfNeeded(Vector3 pos)
+    private async Task SendPositionIfNeededAsync(Vector3 pos)
     {
         if ((DateTime.Now - _lastPosSend).TotalMilliseconds < 500) return;
         _lastPosSend = DateTime.Now;
