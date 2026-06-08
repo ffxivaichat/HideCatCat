@@ -45,8 +45,11 @@ public sealed class Plugin : IAsyncDalamudPlugin
     /// <summary>本地玩家坐标</summary>
     public Vector3 LocalPlayerPosition => _objects.LocalPlayer?.Position ?? Vector3.Zero;
 
-    /// <summary>玩家所在服务器名</summary>
+    /// <summary>玩家原服（创建角色时所在服务器）</summary>
     public string HomeWorldName => _playerState.HomeWorld.ValueNullable?.Name.ToString() ?? "";
+
+    /// <summary>当前所在服务器（跨服后取实际所在服）</summary>
+    public string CurrentWorldName => _objects.LocalPlayer?.CurrentWorld.ValueNullable?.Name.ToString() ?? HomeWorldName;
 
     /// <summary>当前地图 ID（TerritoryType）</summary>
     public uint CurrentTerritoryId => _client.TerritoryType;

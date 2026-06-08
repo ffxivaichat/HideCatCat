@@ -218,7 +218,7 @@ public sealed class MainWindow : Window
         // 显示房间基准服务器/地图
         if (!string.IsNullOrEmpty(_roomServer))
         {
-            var myServer = _plugin.HomeWorldName;
+            var myServer = _plugin.CurrentWorldName;
             var myTerritory = _plugin.CurrentTerritoryId;
             var serverMatch = myServer == _roomServer;
             var mapMatch = myTerritory == _roomTerritoryId;
@@ -232,6 +232,15 @@ public sealed class MainWindow : Window
         }
 
         ImGui.Text("选择阵营:");
+
+        // 错误提示
+        if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
+            ImGui.TextWrapped(_errorMessage);
+            ImGui.PopStyleColor();
+            ImGui.Spacing();
+        }
 
         if (ImGui.Button("[猫队]", new Vector2(200, 40)))
             _ = JoinRoomAsync("CAT");
@@ -252,7 +261,7 @@ public sealed class MainWindow : Window
             return;
         }
         Plugin.Log.Info($"[UI] 发送 JOIN_ROOM team={team}");
-        var server = _plugin.HomeWorldName;
+        var server = _plugin.CurrentWorldName;
         var territoryId = _plugin.CurrentTerritoryId;
         await _gameClient.SendAsync(new { type = "JOIN_ROOM", password = _password, playerName = _playerName, playerServer = server, territoryId, team });
     }
@@ -536,6 +545,7 @@ public sealed class MainWindow : Window
                     }
                     lock (_playersLock) { _players = newList; }
                     _hasJoined = GetPlayersSnapshot().Any(p => p.name == _playerName);
+                    if (_hasJoined) _errorMessage = "";
                     // 同步房间基准服务器和地图
                     _roomServer = jsonTryGetString(json, "roomServer");
                     if (json.TryGetProperty("roomTerritoryId", out var rt) && rt.ValueKind == JsonValueKind.Number)
@@ -564,6 +574,10 @@ public sealed class MainWindow : Window
                 case "CATCH_EVENT":
                     _lastEvent = $"[Cat]{jsonTryGetString(json, "catName")} caught [Mouse]{jsonTryGetString(json, "mouseName")}! " +
                                  $"Mice left: {jsonTryGetInt(json, "miceRemaining")}/{jsonTryGetInt(json, "miceTotal")}";
+                    break;
+
+                case "ERROR":
+                    _errorMessage = jsonTryGetString(json, "message");
                     break;
 
                 case "GAME_OVER":
