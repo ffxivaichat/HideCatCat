@@ -25,6 +25,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly IFramework _framework;
     private readonly ICommandManager _command;
     private readonly IPluginLog _log;
+    private readonly INamePlateGui _namePlateGui;
 
     public static IPluginLog Log { get; private set; } = null!;
 
@@ -32,6 +33,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
     private readonly MainWindow _mainWindow;
     private readonly PluginConfig _config;
     private readonly GameClient _gameClient;
+    /// <summary>管理头顶名牌的隐藏/恢复，仅在游戏中且猫队时启用。</summary>
+    private readonly NamePlateHider _namePlateHider;
 
     /// <summary>当前选中目标的检测结果。</summary>
     public TargetInfo CurrentTarget { get; } = new();
@@ -74,7 +77,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
         IPlayerState playerState,
         IFramework framework,
         ICommandManager command,
-        IPluginLog log)
+        IPluginLog log,
+        INamePlateGui namePlateGui)
     {
         _pi = pi;
         _target = target;
@@ -85,11 +89,15 @@ public sealed class Plugin : IAsyncDalamudPlugin
         _framework = framework;
         _command = command;
         _log = log;
+        // 注入 INamePlateGui，用于修改游戏原生头顶名牌
+        _namePlateGui = namePlateGui;
         Log = log;
 
         _config = pi.GetPluginConfig() as PluginConfig ?? new PluginConfig();
 
         _gameClient = new GameClient();
+        // 创建名牌隐藏控制器，后续根据游戏状态和阵营决定是否启用
+        _namePlateHider = new NamePlateHider(_namePlateGui, _objects);
 
         _windowSystem = new WindowSystem("HideCatCat");
         _mainWindow = new MainWindow(this, _gameClient);
@@ -108,6 +116,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
         });
 
         _framework.Update += OnFrameworkUpdate;
+        // 在插件安装器中显示"打开"按钮，点击后打开主窗口
+        _pi.UiBuilder.OpenMainUi += OnOpenMainUi;
 
         _log.Info("HideCatCat loaded");
         return Task.CompletedTask;
@@ -115,6 +125,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
 
     public async ValueTask DisposeAsync()
     {
+        // 释放名牌隐藏控制器，取消事件订阅并恢复名牌显示
+        _namePlateHider.Dispose();
+        _pi.UiBuilder.OpenMainUi -= OnOpenMainUi;
         _framework.Update -= OnFrameworkUpdate;
         _pi.UiBuilder.Draw -= _windowSystem.Draw;
         _pi.UiBuilder.Draw -= DrawOverlay;
@@ -130,6 +143,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
 
         _log.Info("HideCatCat unloaded");
     }
+
+    // 插件安装器中点击"打开"按钮时触发，与 /hidecatcat 命令行为一致
+    private void OnOpenMainUi() => _mainWindow.Toggle();
 
     private void OnCommand(string command, string args)
     {
@@ -261,9 +277,15 @@ public sealed class Plugin : IAsyncDalamudPlugin
         }
     }
 
-    /// <summary>每帧检测当前目标是否变化，判断是否选中了队友。</summary>
+    /// <summary>每帧检测：① 根据游戏状态和阵营切换名牌隐藏 ② 目标变化时更新队友距离信息。</summary>
     private void OnFrameworkUpdate(IFramework framework)
     {
+        // 猫队 + 游戏进行中 → 启用名牌隐藏；否则 → 禁用
+        if (_mainWindow.IsGameStarted && _mainWindow.IsCatTeam)
+            _namePlateHider.Enable();
+        else
+            _namePlateHider.Disable();
+
         var target = _target.Target;
         if (target == _lastTarget) return;
         _lastTarget = target;

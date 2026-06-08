@@ -51,6 +51,10 @@ public sealed class MainWindow : Window
         _gameClient.OnError += OnError;
     }
 
+    /// <summary>游戏是否正在进行中。供 Plugin.OnFrameworkUpdate 判断是否启用名牌隐藏。</summary>
+    public bool IsGameStarted => _gameStarted;
+    /// <summary>当前玩家是否选择猫队。仅在猫队时启用名牌隐藏，避免鼠队暴露自己位置。</summary>
+    public bool IsCatTeam => _selectedTeam == "CAT";
     /// <summary>游戏悬浮 HUD 数据，供 Plugin.DrawOverlay 读取（仅鼠队显示）</summary>
     public bool OverlayVisible => _gameStarted && _selectedTeam == "MOUSE";
     public string OverlayText { get; private set; } = "";
