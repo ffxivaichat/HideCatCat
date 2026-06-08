@@ -20,6 +20,7 @@ public sealed class MainWindow : Window
     private string _winCondition = "ALL";
     private int _winCount = 1;
     private int _timeLimitMin = 5;
+    private string _errorMessage = "";
 
     // Game state (from server)
     private readonly object _playersLock = new();
@@ -47,6 +48,7 @@ public sealed class MainWindow : Window
 
         _gameClient.OnMessage += OnServerMessage;
         _gameClient.OnConnectionChanged += OnConnectionChanged;
+        _gameClient.OnError += OnError;
     }
 
     /// <summary>游戏悬浮 HUD 数据，供 Plugin.DrawOverlay 读取（仅鼠队显示）</summary>
@@ -135,8 +137,19 @@ public sealed class MainWindow : Window
 
         if (ImGui.Button("连接", new Vector2(200, 30)) && !string.IsNullOrEmpty(_password))
         {
+            _errorMessage = "";
             Plugin.Log.Info($"[UI] 点击连接 url={serverUrl} password=*** player={_playerName}");
             _ = _gameClient.ConnectAsync(serverUrl, _password);
+        }
+
+        if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.3f, 0.3f, 1f));
+            ImGui.TextWrapped(_errorMessage);
+            ImGui.PopStyleColor();
         }
     }
 
@@ -382,6 +395,11 @@ public sealed class MainWindow : Window
             _gameStarted = false;
             _gameOver = false;
         }
+    }
+
+    private void OnError(string error)
+    {
+        _errorMessage = error;
     }
 
     private void OnServerMessage(JsonElement json)
