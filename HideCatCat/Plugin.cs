@@ -116,6 +116,8 @@ public sealed class Plugin : IAsyncDalamudPlugin
         });
 
         _framework.Update += OnFrameworkUpdate;
+        // 在插件安装器中显示"打开"按钮，点击后打开主窗口
+        _pi.UiBuilder.OpenMainUi += OnOpenMainUi;
 
         _log.Info("HideCatCat loaded");
         return Task.CompletedTask;
@@ -125,6 +127,7 @@ public sealed class Plugin : IAsyncDalamudPlugin
     {
         // 释放名牌隐藏控制器，取消事件订阅并恢复名牌显示
         _namePlateHider.Dispose();
+        _pi.UiBuilder.OpenMainUi -= OnOpenMainUi;
         _framework.Update -= OnFrameworkUpdate;
         _pi.UiBuilder.Draw -= _windowSystem.Draw;
         _pi.UiBuilder.Draw -= DrawOverlay;
@@ -140,6 +143,9 @@ public sealed class Plugin : IAsyncDalamudPlugin
 
         _log.Info("HideCatCat unloaded");
     }
+
+    // 插件安装器中点击"打开"按钮时触发，与 /hidecatcat 命令行为一致
+    private void OnOpenMainUi() => _mainWindow.Toggle();
 
     private void OnCommand(string command, string args)
     {
